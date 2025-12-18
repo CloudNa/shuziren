@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI数字人直播系统 | 智能化电商解决方案</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        :root {
+            --bg-sidebar: #000000;
+            --bg-main: #0d0d0d;
+            --bg-card: #171717;
+            --border-color: #2d2d2d;
+            --accent-color: #10a37f;
+            --text-primary: #ececec;
+            --text-secondary: #b4b4b4;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            overflow: hidden; 
+        }
+
+        /* 侧边栏布局 */
+        .sidebar {
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @media (max-width: 1023px) {
+            .sidebar {
+                position: fixed;
+                top: 0; left: 0; height: 100vh;
+                z-index: 100;
+                transform: translateX(-100%);
+                width: 280px;
+            }
+            .sidebar.active { transform: translateX(0); }
+            .overlay {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; width: 100vw; height: 100vh;
+                background: rgba(0,0,0,0.7);
+                backdrop-filter: blur(4px);
+                z-index: 90;
+            }
+            .overlay.active { display: block; }
+        }
+
+        .nav-link { transition: all 0.2s; border-radius: 8px; cursor: pointer; color: var(--text-secondary); }
+        .nav-link:hover, .nav-link.active { background-color: #202123; color: var(--accent-color); }
+
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .glass-card:hover { border-color: #4d4d4d; transform: translateY(-2px); }
+
+        /* 视图容器切换动画 */
+        .view-container {
+            display: none;
+            height: 100%;
+            overflow-y: auto;
+            animation: fadeIn 0.4s ease-out forwards;
+            scroll-behavior: smooth;
+        }
+        .view-container.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mobile-header {
+            background-color: rgba(13, 13, 13, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* 详情页组件 */
+        .detail-badge {
+            background: rgba(16, 163, 127, 0.1);
+            color: var(--accent-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+        .tech-box {
+            background: #000000;
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            margin: 1.5rem 0;
+            border-radius: 12px;
+        }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #8e8ea0;
+            font-size: 0.875rem;
+            margin-bottom: 2rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .back-btn:hover { color: white; }
+
+        .chat-bubble-ai {
+            background-color: #202123;
+            border: 1px solid var(--border-color);
+            border-radius: 12px 12px 12px 2px;
+        }
+
+        .chat-bubble-user {
+            background-color: #0b141a;
+            border: 1px solid var(--accent-color);
+            color: white;
+            border-radius: 12px 12px 2px 12px;
+        }
+
+        .thought-chain {
+            background: #000;
+            border-left: 2px solid #10a37f;
+            padding: 1.25rem;
+            font-family: monospace;
+            color: #888;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3d3d3d; border-radius: 10px; }
+    </style>
+</head>
+<body class="flex flex-col lg:flex-row h-screen overflow-hidden">
+
+    <div id="overlay" class="overlay"></div>
+
+    <!-- 移动端顶部导航 -->
+    <header class="mobile-header lg:hidden sticky top-0 left-0 w-full px-5 py-3 flex items-center justify-between z-50">
+        <div class="flex items-center gap-2" onclick="switchView('home')">
+            <div class="w-7 h-7 rounded overflow-hidden flex items-center justify-center bg-transparent">
+                <img src="Logo_min.png" alt="Logo" class="w-full h-full object-cover">
+            </div>
+            <span class="font-bold text-sm tracking-tight text-white">飞扬数字人系统 v2.0</span>
+        </div>
+        <button id="menuToggle" class="w-10 h-10 flex items-center justify-center text-gray-300">
+            <i class="fa-solid fa-bars-staggered text-xl"></i>
+        </button>
+    </header>
+
+    <!-- 侧边栏导航 -->
+    <aside id="sidebar" class="sidebar flex flex-col p-4 shrink-0 overflow-hidden h-full">
+        <div class="hidden lg:flex items-center gap-3 mb-8 px-2 cursor-pointer" onclick="switchView('home')">
+            <div class="w-8 h-8 rounded overflow-hidden flex items-center justify-center bg-transparent">
+                <img src="Logo_min.png" alt="Logo" class="w-full h-full object-cover">
+            </div>
+            <span class="font-bold text-lg text-white">AI直播系统 v2.5</span>
+        </div>
+
+        <nav class="flex-grow space-y-1 overflow-y-auto pr-2">
+            <div onclick="switchView('home')" class="nav-link flex items-center gap-3 px-3 py-3 text-sm active" id="nav-home">
+                <i class="fa-regular fa-message w-5"></i> 系统简介
+            </div>
+            <div class="text-[10px] uppercase tracking-widest text-gray-600 font-bold mt-8 mb-2 px-3">核心模块分类</div>
+            <div onclick="switchView('home', 'cloning-section')" class="nav-link flex items-center gap-3 px-3 py-3 text-sm">
+                <i class="fa-solid fa-user-gear w-5"></i> 极致克隆技术
+            </div>
+            <div onclick="switchView('home', 'automation-section')" class="nav-link flex items-center gap-3 px-3 py-3 text-sm">
+                <i class="fa-solid fa-wand-sparkles w-5"></i> 智慧生成引擎
+            </div>
+            <div onclick="switchView('home', 'interaction-section')" class="nav-link flex items-center gap-3 px-3 py-3 text-sm">
+                <i class="fa-regular fa-comment-dots w-5"></i> 智能场控交互
+            </div>
+            <div onclick="switchView('home', 'global-section')" class="nav-link flex items-center gap-3 px-3 py-3 text-sm">
+                <i class="fa-solid fa-globe w-5"></i> 全球出海布局
+            </div>
+            <div onclick="switchView('home', 'security-section')" class="nav-link flex items-center gap-3 px-3 py-3 text-sm">
+                <i class="fa-solid fa-shield-halved w-5"></i> 平台合规保障
+            </div>
+            <div class="text-[10px] uppercase tracking-widest text-gray-600 font-bold mt-8 mb-2 px-3">部署与收益</div>
+            <div onclick="switchView('home', 'hardware-section')" class="nav-link flex items-center gap-3 px-3 py-3 text-sm">
+                <i class="fa-solid fa-microchip w-5"></i> 硬件支持配置
+            </div>
+            <div onclick="switchView('home', 'roi-section')" class="nav-link flex items-center gap-3 px-3 py-3 text-sm">
+                <i class="fa-solid fa-chart-line w-5"></i> 收益与成本对标
+            </div>
+        </nav>
+
+        <div class="mt-auto border-t border-[#2d2d2d] pt-4">
+            <a href="tel:13961120761" class="w-full flex items-center justify-center gap-3 px-3 py-3 rounded-xl bg-[#202123] text-xs hover:bg-[#2a2a2a] border border-[#2d2d2d] text-white">
+                <i class="fa-solid fa-circle-play text-[#10a37f]"></i> 预约演示
+            </a>
+        </div>
+    </aside>
+
+    <!-- 视图容器 -->
+    <main class="flex-grow relative h-full overflow-hidden">
+        
+        <!-- 视图 0: 主页 -->
+        <div id="view-home" class="view-container active">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto">
+                <!-- Header Intro -->
+                <section id="intro" class="mb-20">
+                    <h1 class="text-3xl lg:text-6xl font-bold mb-6 leading-tight text-white">重新定义<br class="md:hidden"><span class="text-[#10a37f]">直播生产力</span></h1>
+                    <p class="text-base lg:text-xl text-[#b4b4b4] leading-relaxed mb-10">
+                        基于 26 项核心技术专利与 Gemini 智慧大脑。提供 24/7 不打烊、1:1 像素级复刻真人的全自动化直播带货方案。
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="p-6 glass-card rounded-2xl text-center">
+                            <div class="text-2xl lg:text-3xl font-bold text-[#10a37f] mb-1">90%</div>
+                            <div class="text-[10px] text-gray-500 uppercase font-bold">运营成本降幅</div>
+                        </div>
+                        <div class="p-6 glass-card rounded-2xl text-center">
+                            <div class="text-2xl lg:text-3xl font-bold text-[#10a37f] mb-1">26项</div>
+                            <div class="text-[10px] text-gray-500 uppercase font-bold">核心专利技术</div>
+                        </div>
+                        <div class="p-6 glass-card rounded-2xl text-center">
+                            <div class="text-2xl lg:text-3xl font-bold text-[#10a37f] mb-1">40+</div>
+                            <div class="text-[10px] text-gray-500 uppercase font-bold">支持全球语种</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- AI 智慧大脑演示 -->
+                <section id="demo" class="mb-20 lg:mb-32 text-white">
+                    <div class="flex items-center gap-2 mb-8">
+                        <div class="w-1.5 h-6 bg-[#10a37f] rounded-full"></div>
+                        <h2 class="text-xl lg:text-2xl font-bold">✨ AI 智慧大脑即时演示</h2>
+                    </div>
+                    <div class="bg-[#171717] rounded-3xl border border-[#2d2d2d] overflow-hidden shadow-2xl">
+                        <div id="chatBox" class="p-5 lg:p-8 space-y-6 h-[350px] overflow-y-auto">
+                            <div class="flex gap-4 items-start">
+                                <div class="w-8 h-8 rounded bg-[#10a37f] flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white">AI</div>
+                                <div class="chat-bubble-ai p-4 text-sm leading-relaxed max-w-[90%] text-gray-200 shadow-sm">
+                                    您好！我是您的 AI 直播策划。请输入您的产品卖点，我将为您模拟高转化直播脚本生成。
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 lg:p-6 border-t border-[#2d2d2d] bg-[#0d0d0d]">
+                            <div class="flex flex-col gap-3">
+                                <textarea id="productInput" rows="2" placeholder="输入卖点（如：新款运动鞋...）" class="w-full bg-[#171717] border border-[#2d2d2d] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#10a37f] resize-none text-white"></textarea>
+                                <div class="flex gap-2">
+                                    <select id="goalSelect" class="flex-grow bg-[#171717] border border-[#2d2d2d] rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-[#10a37f] text-gray-400">
+                                        <option value="optimize">高转化脚本优化</option>
+                                        <option value="translate">TikTok 出海转换</option>
+                                        <option value="objection">智能异议预案</option>
+                                    </select>
+                                    <button id="generateBtn" class="bg-[#10a37f] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#0e8b6b] flex items-center justify-center gap-2">
+                                        <span>生成脚本</span>
+                                        <i class="fa-solid fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 01 极致克隆技术 -->
+                <section id="cloning-section" class="mb-20">
+                    <h2 class="text-2xl lg:text-3xl font-bold mb-10 flex items-center gap-4 text-white">
+                        <span class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs">01</span>
+                        极致克隆技术
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                        <div class="glass-card rounded-2xl p-6 lg:p-8 border-l-4 border-l-[#10a37f]" onclick="switchView('f1-voice')">
+                            <h3 class="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-microphone-lines text-[#10a37f]"></i> 1:1 真人声形复刻
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">像素级深度克隆，还原真人的外貌、音色、语调及呼吸节奏，实现极致拟真感。</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 lg:p-8" onclick="switchView('f25-model')">
+                            <h3 class="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-dna text-[#10a37f]"></i> 高精准克隆算法
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">优化肌肉律动深度建模，针对 24 个面部群组进行像素级口型对位，彻底解决塑胶感。</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 lg:p-8" onclick="switchView('f24-sync')">
+                            <h3 class="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-face-smile-beam text-[#10a37f]"></i> 实时镜像与口型匹配
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">支持摄像头实时映射；AI 自动执行碎片化合成技术，确保口型互动毫秒级同步。</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 lg:p-8" onclick="switchView('f8-asset')">
+                            <h3 class="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-person-walking text-[#10a37f]"></i> 多姿态与素材驱动
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">支持坐、立、走多种姿态克隆；导入视频素材直接驱动，实现历史素材二次变现。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 02 智慧生成引擎 -->
+                <section id="automation-section" class="mb-20">
+                    <h2 class="text-2xl lg:text-3xl font-bold mb-10 flex items-center gap-4 text-white">
+                        <span class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs">02</span>
+                        智慧生成引擎
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                        <div class="glass-card rounded-2xl p-6 lg:p-8 border-t-4 border-t-[#10a37f]" onclick="switchView('deepseek')">
+                            <h3 class="font-bold text-lg text-[#10a37f] mb-3 flex items-center gap-2">
+                                <i class="fa-solid fa-brain text-[#10a37f]"></i> DeepSeek 实时推理
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">集成大模型思维核心，不仅能对点互动，更能执行逻辑推理回复复杂提问。</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 lg:p-8" onclick="switchView('script-ai')">
+                            <h3 class="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-pen-nib text-[#10a37f]"></i> 智能话术与实时改写
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">AI 自动生成脚本并实时重构话术，确保内容永不重复，规避判重风险。</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 lg:p-8" onclick="switchView('dynamic-ai')">
+                            <h3 class="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-[#10a37f]"></i> AI 动作与音色泛化
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">肢体动作随机泛化演变，不循环。语速情感随内容实时变量，还原真人带货张力。</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 lg:p-8" onclick="switchView('video-matrix')">
+                            <h3 class="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-clapperboard text-[#10a37f]"></i> 短视频矩阵制作
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">内置免费数字人短视频引擎，一键输入脚本即产出高质量引流视频。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 03 智能场控交互 -->
+                <section id="interaction-section" class="mb-20">
+                    <h2 class="text-2xl lg:text-3xl font-bold mb-10 flex items-center gap-4 text-white">
+                        <span class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs">03</span>
+                        智能场控交互
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                        <div class="glass-card rounded-2xl p-6 lg:p-8 border-l-4 border-l-[#10a37f]" onclick="switchView('interaction-p2p')">
+                            <h3 class="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-comment-dots text-[#10a37f]"></i> 点对点互动回复
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">精准识别弹幕关键词。执行一对一语音回复；结合场控同步，闭环转化路径。</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 lg:p-8" onclick="switchView('interaction-social')">
+                            <h3 class="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-door-open text-[#10a37f]"></i> 欢迎进入与送礼感谢
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">变量读名欢迎每一位入场观众。配合送礼语音致谢与报时功能，还原直播温情。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 04 全球出海布局 -->
+                <section id="global-section" class="mb-20">
+                    <h2 class="text-2xl lg:text-3xl font-bold mb-10 flex items-center gap-4 text-white">
+                        <span class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs">04</span>
+                        全球出海布局
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                        <div class="glass-card rounded-2xl p-6 lg:p-8 border-l-4 border-l-orange-500" onclick="switchView('global-lang')">
+                            <h3 class="font-bold text-lg mb-3 text-orange-400 flex items-center gap-2">
+                                <i class="fa-solid fa-globe text-orange-400"></i> 40种语言跨海播
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">深度适配 TikTok。覆盖 40 种主流语音转化模型；支持国内外所有平台全兼容。</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 lg:p-8" onclick="switchView('auto-shift')">
+                            <h3 class="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-repeat text-[#10a37f]"></i> 声音与形象自动换班
+                            </h3>
+                            <p class="text-sm text-gray-400 leading-relaxed">支持多个克隆角色自动交替开播。模拟团队排班，确护 24H 活跃状态。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 05 平台合规保障 -->
+                <section id="security-section" class="mb-20">
+                    <h2 class="text-2xl lg:text-3xl font-bold mb-10 flex items-center gap-4 text-white">
+                        <span class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs">05</span>
+                        平台合规保障
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="glass-card rounded-2xl p-6 border-l-4 border-l-red-500" onclick="switchView('compliance-verify')">
+                            <h3 class="font-bold text-sm mb-2 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-id-card text-red-500"></i> 视频号报时验证
+                            </h3>
+                            <p class="text-[10px] text-gray-500">手持动态卡片。点击查看详情。</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6" onclick="switchView('security-guard')">
+                            <h3 class="font-bold text-sm mb-2 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-shield-halved text-red-500"></i> 直播保镖与防封
+                            </h3>
+                            <p class="text-[10px] text-gray-500">环境监测。点击查看详情。</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6" onclick="switchView('easy-install')">
+                            <h3 class="font-bold text-sm mb-2 text-white flex items-center gap-2">
+                                <i class="fa-solid fa-bolt-lightning text-red-500"></i> 极速部署一键安装
+                            </h3>
+                            <p class="text-[10px] text-gray-500">环境零门槛。点击查看详情。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 06 硬件支持配置 -->
+                <section id="hardware-section" class="mb-20">
+                    <h2 class="text-3xl font-bold mb-12 flex items-center gap-4">
+                        <span class="w-8 h-8 rounded bg-gray-800 flex items-center justify-center text-sm">03</span>
+                        硬件支撑配置单
+                    </h2>
+                    <div class="bg-[#212121] rounded-3xl border border-[#3d3d3d] overflow-hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-[#3d3d3d]">
+                            <div class="p-8 text-center">
+                                <i class="fa-solid fa-microchip text-2xl text-[#10a37f] mb-4"></i>
+                                <div class="text-xs text-gray-500 mb-2 uppercase font-bold">处理器 CPU</div>
+                                <div class="text-sm font-semibold">i5-12500<br>或同性能以上</div>
+                            </div>
+                            <div class="p-8 text-center bg-[#2a2a2a]">
+                                <i class="fa-solid fa-server text-2xl text-[#10a37f] mb-4"></i>
+                                <div class="text-xs text-gray-500 mb-2 uppercase font-bold">显卡 GPU</div>
+                                <div class="text-sm font-semibold">RTX 3060 (12G)<br>或以上 N卡</div>
+                            </div>
+                            <div class="p-8 text-center">
+                                <i class="fa-solid fa-memory text-2xl text-[#10a37f] mb-4"></i>
+                                <div class="text-xs text-gray-500 mb-2 uppercase font-bold">运行内存 RAM</div>
+                                <div class="text-sm font-semibold">32GB<br>DDR4/DDR5</div>
+                            </div>
+                            <div class="p-8 text-center">
+                                <i class="fa-solid fa-hdd text-2xl text-[#10a37f] mb-4"></i>
+                                <div class="text-xs text-gray-500 mb-2 uppercase font-bold">硬盘 SSD</div>
+                                <div class="text-sm font-semibold">固态硬盘<br>NVMe 协议</div>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-[#1a3d34] text-center text-[11px] text-[#10a37f] font-medium tracking-wide">
+                            ⚠️ 特别提醒：为了保障实时克隆与口型算法的流畅度，显存显存必须大于 12G
+                        </div>
+                    </div>
+                </section>
+                </section>
+
+                <!-- 收益与成本对标 -->
+                <section id="roi-section" class="mb-32">
+                    <h2 class="text-3xl font-bold mb-12">收益与成本深度对标</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-[#3d3d3d] text-gray-500 text-xs">
+                                    <th class="pb-4 font-bold uppercase tracking-wider">对标维度</th>
+                                    <th class="pb-4 font-bold uppercase tracking-wider">传统真人直播</th>
+                                    <th class="pb-4 font-bold uppercase tracking-wider text-[#10a37f]">本系统 AI 自动播</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm">
+                                <tr class="border-b border-[#3d3d3d]">
+                                    <td class="py-6 font-medium">月度运营成本</td>
+                                    <td class="py-6 text-gray-400">￥30,000 - 50,000</td>
+                                    <td class="py-6 text-[#10a37f] font-bold">￥1,500 - 2,500</td>
+                                </tr>
+                                <tr class="border-b border-[#3d3d3d]">
+                                    <td class="py-6 font-medium">每日开播时长</td>
+                                    <td class="py-6 text-gray-400">4 - 6 小时 (体力受限)</td>
+                                    <td class="py-6 text-[#10a37f] font-bold">24 小时 (全天候)</td>
+                                </tr>
+                                <tr class="border-b border-[#3d3d3d]">
+                                    <td class="py-6 font-medium">团队稳定性</td>
+                                    <td class="py-6 text-gray-400">主播易离职、有情绪波动</td>
+                                    <td class="py-6 text-[#10a37f] font-bold">永不离职、状态恒定</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-6 font-medium">管理门槛</td>
+                                    <td class="py-6 text-gray-400">高 (培训、场控、多岗位协作)</td>
+                                    <td class="py-6 text-[#10a37f] font-bold">低 (一键安装部署开播)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Footer -->
+                <footer class="max-w-4xl mx-auto text-center py-20 border-t border-[#2d2d2d] text-white">
+                    <h2 class="text-2xl lg:text-4xl font-bold mb-6 text-white">开启您的直播 2.0 时代</h2>
+                    <p class="text-gray-500 mb-10 text-sm lg:text-base">立即预约演示，开启您的数字化商业帝国。</p>
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        <a href="tel:13961120761" class="flex items-center justify-center gap-3 px-8 py-4 bg-[#171717] rounded-2xl border border-[#2d2d2d] font-bold hover:border-[#10a37f] transition text-[#ececec]">
+                            <i class="fa-solid fa-phone text-[#10a37f]"></i> 拨打电话
+                        </a>
+                        <a href="mailto:709348460@qq.com" class="flex items-center justify-center gap-3 px-8 py-4 bg-[#171717] rounded-2xl border border-[#2d2d2d] font-bold hover:border-[#10a37f] transition text-[#ececec]">
+                            <i class="fa-solid fa-envelope text-[#10a37f]"></i> 业务咨询
+                        </a>
+                    </div>
+                    <p class="mt-16 text-[10px] text-gray-600 uppercase tracking-widest">Nexus Cloud AI &copy; 2025</p>
+                </footer>
+            </div>
+            </div>
+        </div>
+
+        <!-- 详情视图块 -->
+        <!-- DeepSeek 实时推理 深化详情页 -->
+        <div id="view-deepseek" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Intelligence Core System</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">DeepSeek 实时推理 (F15)<br><span class="text-[#10a37f]">赋予数字人金牌销售的话术灵魂</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-microchip"></i> 心智决策中枢
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            集成 DeepSeek-V3 级大模型思维能力。数字人不再依赖死板的关键词库，而是通过后台“思索链”实时理解观众提问背后的消费意图。系统能在毫秒内完成意图识别、知识检索、策略制定与拟人化话术生成，实现真人心智级的深度对话。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-comments-dollar"></i> 高情商互动博弈
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            DeepSeek 赋予了 AI 处理复杂异议的能力。面对“太贵了”、“性价比不高”等挑战，AI 会自动调用对比策略或福利钩子，生成极具诱导力的回复话术。每一句回复都经过大模型的逻辑推演，而非简单的语料库匹配，转化率较传统直播提升 40% 以上。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="thought-chain">
+                    <div class="text-[#10a37f] font-bold mb-2">&lt;Thinking Chain 可视化示例&gt;</div>
+                    1. 识别意图：[观众询问发货时效] -> [感知购买焦虑]<br>
+                    2. 检索库：[浙江仓, 申通, 24h揽收]<br>
+                    3. 策略制定：[确认时效 + 强调顺丰补差价选项 + 实时逼单优惠]<br>
+                    4. 话术生成：[“宝子放心，咱们是现货直发，现在下单最快今晚就能揽收...”]
+                </div>
+
+                <div class="tech-box border-dashed border-[#10a37f] mt-12">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">核心商业逻辑：高智商即高转化</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+                        <div class="p-4">
+                            <p class="text-2xl font-bold text-[#10a37f] mb-2">0 延迟</p>
+                            <p class="text-xs text-gray-500">毫秒级推理响应</p>
+                        </div>
+                        <div class="p-4 border-x border-[#2d2d2d]">
+                            <p class="text-2xl font-bold text-[#10a37f] mb-2">唯一性</p>
+                            <p class="text-xs text-gray-500">千人千面的动态话术</p>
+                        </div>
+                        <div class="p-4">
+                            <p class="text-2xl font-bold text-[#10a37f] mb-2">低风控</p>
+                            <p class="text-xs text-gray-500">规避重复话术判罚</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 高精准克隆算法 深化详情页 -->
+        <div id="view-f25-model" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Algorithm Foundation</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">高精准克隆算法 (F25)<br><span class="text-[#10a37f]">攻克数字人“机械感”的核心底座</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f]">肌肉律动深度建模</h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            系统底层优化了 24 个面部群组的肌肉协同逻辑。通过 3D Mesh 表层张力模拟技术，实时计算皮肤在发音、微笑及挑眉时的物理牵引，彻底解决传统算法中面部僵硬、表情不连贯的痼疾。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f]">多语种动态口型适配</h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            针对 40 种主流语言的音素（Phoneme）进行专项训练。不论是英语的爆破音，还是小语种的颤音，算法都能确保唇部开合度与发音特征毫秒级同步，实现“音画一体”的沉浸式带货。
+                        </p>
+                    </div>
+                </div>                
+                <div class="bg-[#000000] border border-[#2d2d2d] rounded-2xl p-8 mb-12">
+                    <h3 class="text-2xl font-bold mb-8 text-white text-center">F25 算法演进逻辑：从“像”到“真”</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-[#10a37f] mb-2">99.8%</div>
+                            <p class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-2">口型同步精度</p>
+                            <p class="text-[13px] text-[#8e8ea0]">基于端到端渲染引擎，解决 0.1s 级别的音画延迟。</p>
+                        </div>
+                        <div class="text-center border-x border-[#2d2d2d] px-4">
+                            <div class="text-3xl font-bold text-[#10a37f] mb-2">4K</div>
+                            <p class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-2">纹理实时映射</p>
+                            <p class="text-[13px] text-[#8e8ea0]">每一像素的毛孔纹理与光照反应均经过物理渲染。</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-[#10a37f] mb-2">12G</div>
+                            <p class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-2">显存深度优化</p>
+                            <p class="text-[13px] text-[#8e8ea0]">在民用卡上即可实现工业级渲染精度与稳定性。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tech-box">
+                    <h3 class="text-xl font-bold mb-4 text-white">商业核心价值：品牌信任溢价</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        在电商直播中，观众的信任来源于“真实感”。高精准克隆算法不仅是技术的展示，更是品牌形象的护城河。极致拟真的视觉表现能显著提升新访客的停留时长（Avg. Stay Time 提升 45%），减少因“AI感”过重导致的流量流失，是实现高转化直播间的物理基石。
+                    </p>
+                </div>
+            </div>
+        </div>
+                <!-- 1:1 真人声形复刻 深化详情页 -->
+        <div id="view-f1-voice" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Neural Cloning Tech</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">1:1 真人声形复刻<br><span class="text-[#10a37f]">打破虚实边界的技术巅峰</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-microphone-lines"></i> 声音复刻 (F1)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            采用业内领先的 48kHz 高采样率声码器，通过深度神经网络模型提取主理人的音色频率曲线。不仅能复刻基础音色，更能捕捉发音习惯、语气起伏以及独特的“情绪呼吸感”，让 AI 生成的语音具备真人的温暖感。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-video"></i> 形象建模 (F25)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            像素级建模还原，针对面部微表情、皮肤纹理以及眼神交流进行深度渲染。结合 4K 超清视觉算法，数字分身能完美呈现主理人的亲和力与自信感，彻底消除传统数字人的“塑胶感”。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tech-box border-dashed border-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">核心商业逻辑：数字化主权</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-full bg-[#10a37f]/20 flex items-center justify-center text-[#10a37f] shrink-0 mt-1">1</div>
+                            <div>
+                                <p class="font-bold text-white mb-1">永不流失的金牌主播</p>
+                                <p class="text-sm text-[#8e8ea0]">将主理人的直播经验与形象沉淀为数字化资产，品牌不再受限于主播离职或身体状况导致的停播风险。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-full bg-[#10a37f]/20 flex items-center justify-center text-[#10a37f] shrink-0 mt-1">2</div>
+                            <div>
+                                <p class="font-bold text-white mb-1">一人分饰多角，千号齐播</p>
+                                <p class="text-sm text-[#8e8ea0]">只需录制一次 2 分钟素材，即可在成百上千个直播间同时进行“真人级”带货，实现品牌传播规模化裂变。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-full bg-[#10a37f]/20 flex items-center justify-center text-[#10a37f] shrink-0 mt-1">3</div>
+                            <div>
+                                <p class="font-bold text-white mb-1">录播的价格，真人的体验</p>
+                                <p class="text-sm text-[#8e8ea0]">以接近于零的边际成本，获得等同于金牌主播的视听表现力。每小时运营成本不到 5 元，ROI 提升上限不封顶。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 实时镜像与口型匹配 深化详情页 -->
+        <div id="view-f24-sync" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Real-time Drive System</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">实时镜像与口型匹配<br><span class="text-[#10a37f]">极致同步的毫秒级交互体验</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f]">真人摄像头实时克隆 (F24)</h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            采用端到端深度捕捉技术，实时提取真人主播在摄像头前的面部锚点、头动偏角及眼球转动。系统能将这些细微的物理反馈秒级映射至数字分身，主播在后台的一举一动均能瞬间呈现在观众面前。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f]">原画级口型碎片合成 (F5)</h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            不同于传统的暴力拉伸算法，F5 技术通过 AI 自动执行原画素材的碎片化重组。系统会根据音频频率瞬间检索最贴合的像素块进行合成，确保互动时的口型与发音在像素级别上无缝衔接。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tech-box">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">毫秒级交互逻辑流</h3>
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex-1 text-center p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d]">
+                            <i class="fa-solid fa-microphone text-[#10a37f] mb-2"></i>
+                            <p class="text-xs font-bold text-white">音视采集</p>
+                            <p class="text-[10px] text-gray-500">毫秒级同步输入</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right hidden md:block text-gray-700"></i>
+                        <div class="flex-1 text-center p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d]">
+                            <i class="fa-solid fa-layer-group text-[#10a37f] mb-2"></i>
+                            <p class="text-xs font-bold text-white">F5 碎片合成</p>
+                            <p class="text-[10px] text-gray-500">口型像素重组</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right hidden md:block text-gray-700"></i>
+                        <div class="flex-1 text-center p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d]">
+                            <i class="fa-solid fa-bolt text-[#10a37f] mb-2"></i>
+                            <p class="text-xs font-bold text-white">实时渲染</p>
+                            <p class="text-[10px] text-gray-500">互动零延时感知</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 tech-box border-l-4 border-l-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-4 text-white">为何“实时性”决定转化率？</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        在直播间中，延迟是信任的杀手。我们的实时镜像技术让数字人具备了“即时反馈”的能力。当主播在后台观察到弹幕询问并即刻做出微表情回应时，这种“虚实同屏”的灵动感能瞬间击穿观众的防备，建立如同真人直播般的强互动气场，将询单转化率提升 60% 以上。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 多姿态与素材驱动 深化详情页 (F8 & F9) -->
+        <div id="view-f8-asset" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge text-white">Content Production & Drive</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8 text-white text-white">多姿态与素材驱动 (F8 & F9)<br><span class="text-[#10a37f]">无限复用的数字化生产力引擎</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 text-white">
+                    <div class="tech-box text-white">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] text-white">全场景多姿态迁移 (F8)</h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            告别死板的单一坐姿机位。F8 技术支持数字人实现在坐、立、侧身讲解、走动展示以及复杂手势交互间的平滑切换。通过对骨骼锚点的动态追踪与平滑算法，确保姿态变换过程中光影与透视逻辑的物理准确。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] text-white">爆款素材实时驱动 (F9)</h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            商家无需重复拍摄。只需导入已有的真人直播素材、口播视频或爆款短视频，系统即可自动提取其中的“动作流”与“韵律感”来实时驱动克隆形象。这种“视频换脸式”的直播生产方式，让同一套优质素材能够在不同机位、不同形象间产生指数级的裂变价值。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tech-box">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">商业化落地场景</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center">
+                            <i class="fa-solid fa-shirt text-[#10a37f] mb-3 text-xl text-white"></i>
+                            <p class="font-bold text-sm mb-2 text-white">服饰穿搭秀</p>
+                            <p class="text-[11px] text-gray-500">走动转圈、细节展示姿态库</p>
+                        </div>
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center">
+                            <i class="fa-solid fa-mug-hot text-[#10a37f] mb-3 text-xl text-white"></i>
+                            <p class="font-bold text-sm mb-2 text-white">生活电器演示</p>
+                            <p class="text-[11px] text-gray-500">手部特写、多维度交互动作</p>
+                        </div>
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center">
+                            <i class="fa-solid fa-earth-asia text-[#10a37f] mb-3 text-xl text-white"></i>
+                            <p class="font-bold text-sm mb-2 text-white">全球多机位裂变</p>
+                            <p class="text-[11px] text-gray-500">一套驱动源多账号同时换脸播</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 tech-box border-dashed border-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-4 text-white">F8/F9：让直播不再依赖拍摄</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        传统直播间最大的成本支出之一是“拍摄现场的维护”。通过多姿态与素材驱动技术，我们将直播从“现场实拍”进化为“资产生成”。这意味着一个品牌只需沉淀一次核心动作资产库，即可通过 F9 引擎无限次生成不同背景、不同服饰、不同人设的直播内容。这种 **“视频即驱动”** 的模式，让商家的内容产出效率提升了 10 倍以上，彻底解决了内容创作枯竭的难题。
+                    </p>
+                </div>
+            </div>
+        </div>   
+        
+        <!-- 智能话术与实时改写 深化详情页 (F10 & F11) -->
+        <div id="view-script-ai" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Content Intelligence</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">智能话术与实时改写 (F10 & F11)<br><span class="text-[#10a37f]">打造永不判重的直播脚本灵魂</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> 智慧话术生成 (F10)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            系统内置电商深度训练的话术生成引擎。商家只需输入商品 SKU 卖点或产品链接，AI 即可自动生成包含“痛点切入、核心展示、限时逼单、成交闭环”在内的多套专业直播脚本。支持针对抖音、TikTok 等不同平台调性进行语感适配。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-arrows-rotate"></i> 实时改写防重 (F11)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            这是规避封号的核心黑科技。系统支持在直播过程中实时对脚本执行“语义重构”。这意味着即便直播 24 小时，每一轮讲解的遣词造句、逻辑顺序和逼单策略都不会完全重复。从底层逻辑上深度规避平台对“录播判定”与“内容判重”的降权风险。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tech-box border-dashed border-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">脚本动态演变逻辑</h3>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d]">
+                            <p class="text-xs text-gray-500 mb-2 uppercase">第一轮讲解 (原始)</p>
+                            <p class="text-sm text-white italic">“这款运动鞋今天工厂直发，只要99元，透气不臭脚，大家拼手速抢！”</p>
+                        </div>
+                        <div class="flex justify-center"><i class="fa-solid fa-arrow-down text-[#10a37f]"></i></div>
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#10a37f]/30">
+                            <p class="text-xs text-[#10a37f] mb-2 uppercase font-bold">第二轮讲解 (F11 实时重写)</p>
+                            <p class="text-sm text-white italic">“看这做工，宝子们，不到两位数就能拿下的超轻跑鞋。蜂窝网眼技术，出汗也不黏糊。库存不多，手慢无！”</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 tech-box">
+                    <h3 class="text-xl font-bold mb-4 text-white">商业核心优势：极低的内容创作门槛</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        传统数字人直播间最头疼的是脚本准备。通过 F10/F11 组合，运营人员从枯燥的文案撰写中彻底解放。AI 不仅是生成者，更是持续的优化者。结合我们的 **音色情感变量 (F14)**，改写后的每一句台词都会匹配最自然的情绪波动，让直播间始终保持高转化磁场，确保长效稳定的流量推流。
+                    </p>
+                </div>
+            </div>
+        </div>   
+        
+        <!-- AI 动作与音色泛化 深化详情页 (F12, F13, F14) -->
+        <div id="view-dynamic-ai" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Humanoid Variation Engine</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">AI 动作与音色泛化<br><span class="text-[#10a37f]">打破“机器人感”的视觉与听觉张力</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-wand-sparkles"></i> 肢体动作随机泛化 (F12)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            系统内置“非线性动作预测算法”。数字人的肢体动作不再是机械的 30 秒循环，而是随脚本语境随机演变。包括但不限于眨眼频率、头动倾斜角、手势大幅度舒展及微小的重心偏移。这种“不可预测性”是还原真人质感的底层密钥，能让观众产生直播间“就在当下”的即时反馈感。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-sliders"></i> 音色情感实时变量 (F14)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            搭载多模态情感声学模型。系统会根据生成的直播话术自动调整声音属性。在讲解爆款产品时语速加快、语气激昂；在回复售后咨询时语速放缓、语感柔和。这种具备“情绪呼吸感”的配音，比传统 TTS 语音转化更能击穿观众的心智防线。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-[#000000] border border-[#2d2d2d] rounded-2xl p-8 mb-12">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">F13: 实时泛化合成技术路径</h3>
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-6">
+                        <div class="flex-1 text-center p-4 bg-[#171717] rounded-xl border border-[#2d2d2d]">
+                            <p class="text-[#10a37f] font-bold mb-1">语义解析</p>
+                            <p class="text-[11px] text-gray-500 text-white">提取台词背后的情感权重</p>
+                        </div>
+                        <i class="fa-solid fa-plus text-gray-600"></i>
+                        <div class="flex-1 text-center p-4 bg-[#171717] rounded-xl border border-[#2d2d2d]">
+                            <p class="text-[#10a37f] font-bold mb-1 text-white">骨骼噪点注入</p>
+                            <p class="text-[11px] text-gray-500">生成随机自然的肢体动效</p>
+                        </div>
+                        <i class="fa-solid fa-arrow-right text-gray-600 hidden md:block"></i>
+                        <div class="flex-1 text-center p-4 bg-[#10a37f]/10 rounded-xl border border-[#10a37f]/40">
+                            <p class="text-white font-bold mb-1">即时渲染输出</p>
+                            <p class="text-[11px] text-white">具备灵魂的数智分身</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tech-box">
+                    <h3 class="text-xl font-bold mb-4 text-white">商业核心价值：停留即转化</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        在“注意力经济”时代，直播间的停留率直接关联平台的推流权重。过于死板的数字人会瞬间被用户刷走。通过 F12/F14 的泛化技术，我们将数字人的“拟人性”提升了 300%。由于画面和声音始终处于动态变化中，用户大脑不会因感知到“循环”而产生疲劳，实测直播间平均停留时长（Avg. Duration）可提升 48% 以上。
+                    </p>
+                </div>
+            </div>
+        </div>       
+        
+        <!-- 短视频矩阵制作 深化详情页 (F2) -->
+        <div id="view-video-matrix" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Traffic & Content Matrix</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">短视频矩阵制作 (F2)<br><span class="text-[#10a37f]">驱动公域流量的“自动抽水机”</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group"></i> 分布式量产引擎
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            基于分布式云渲染技术，系统支持分钟级生成 1080P 高清数字人带货视频。商家只需导入爆款脚本模板，引擎即可自动匹配对应音色、背景与数字人动作，实现单日产出 1000+ 条原创视频的工业级并发能力。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-shuffle"></i> 视觉去重算法
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            为了确保每一条视频都能通过平台的原创审核，系统内置了“视觉噪点注入”与“动态重组”功能。自动对视频背景、前景贴纸、转场特效及音频 MD5 进行动态变幻，确保矩阵账号的内容独特性，深度规避判重降权。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tech-box border-dashed border-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">“种草+拔草”全链路引流模型</h3>
+                    <div class="flex flex-col md:flex-row items-stretch justify-between gap-6">
+                        <div class="flex-1 p-5 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center">
+                            <p class="text-[#10a37f] font-bold mb-2">1. 矩阵种草</p>
+                            <p class="text-[11px] text-gray-500">通过 F2 批量产出挂车视频，覆盖千名精准关键词标签，获取公域免费流量。</p>
+                        </div>
+                        <div class="flex items-center justify-center"><i class="fa-solid fa-link text-gray-700"></i></div>
+                        <div class="flex-1 p-5 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center">
+                            <p class="text-[#10a37f] font-bold mb-2">2. 直播闭环</p>
+                            <p class="text-[11px] text-gray-500">视频流引导用户进入 24H AI 直播间。由 DeepSeek 执行即时答疑，闭环成交转化。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 space-y-6">
+                    <h3 class="text-2xl font-bold text-white">商业运营场景</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="p-6 bg-[#171717] rounded-2xl border border-[#2d2d2d]">
+                            <h4 class="text-white font-bold mb-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass-chart text-[#10a37f] text-sm"></i> 搜索拦截策略</h4>
+                            <p class="text-xs text-[#8e8ea0]">批量制作针对长尾关键词（如：某某鞋怎么穿搭）的解答视频，实现平台搜索入口的全面覆盖。</p>
+                        </div>
+                        <div class="p-6 bg-[#171717] rounded-2xl border border-[#2d2d2d]">
+                            <h4 class="text-white font-bold mb-2 flex items-center gap-2"><i class="fa-solid fa-user-group text-[#10a37f] text-sm"></i> 多人设多账号裂变</h4>
+                            <p class="text-xs text-[#8e8ea0]">一套脚本自动派生出 50 种不同主播形象的视频版本，在多账号矩阵下测试流量最优解，快速锁定爆款方向。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>    
+        
+        <!-- 点对点互动回复 深化详情页 (F16 & F17) -->
+        <div id="view-interaction-p2p" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Real-time Interaction Engine</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">点对点智能互动回复<br><span class="text-[#10a37f]">让每一条弹幕都得到金牌导购级的响应</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-comment-dots"></i> 语义识别与精准对答 (F16)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            基于自研的 NLP 语义理解引擎，系统能毫秒级抓取公屏弹幕。不仅能识别简单的关键词，更能理解观众询问的深层意图（如：对比不同型号、询问特定身高的尺码建议等）。AI 会瞬间调用私域知识库，生成逻辑严密、语气自然的语音回复，实现真正的“点对点”个性化服务。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-hand-pointer"></i> 智慧场控联动引导 (F17)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            这是转化闭环的关键。当 AI 在语音回答特定商品的咨询时，F17 场控引擎会自动在公屏弹出对应的商品卡片或小黄车链接，并辅以文字提示。这种“声、画、文”三位一体的同步交互，极大缩短了用户的决策路径。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-[#000000] border border-[#2d2d2d] rounded-2xl p-8 mb-12">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">毫秒级互动响应逻辑流</h3>
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex-1 text-center p-4 bg-[#171717] rounded-xl border border-[#2d2d2d]">
+                            <p class="text-[#10a37f] font-bold mb-1">弹幕抓取</p>
+                            <p class="text-[11px] text-gray-500">毫秒级意图识别</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right hidden md:block text-gray-700"></i>
+                        <div class="flex-1 text-center p-4 bg-[#171717] rounded-xl border border-[#2d2d2d]">
+                            <p class="text-[#10a37f] font-bold mb-1">知识库匹配</p>
+                            <p class="text-[11px] text-gray-500">提取精准参数与策略</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right hidden md:block text-gray-700"></i>
+                        <div class="flex-1 text-center p-4 bg-[#10a37f]/10 rounded-xl border border-[#10a37f]/40">
+                            <p class="text-white font-bold mb-1">即时音视输出</p>
+                            <p class="text-[11px] text-white">语音/口型/链接同步</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tech-box border-l-4 border-l-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-4 text-white">商业核心价值：从“围观”到“成交”</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        传统 AI 直播常因为“不回话”导致用户流失。我们的点对点互动技术让每一个进入直播间的用户都能感受到被重视。实测数据显示，具备精准回复能力的直播间，观众平均停留时长提升了 55%，询单转化率提升了 38% 以上。它是提升直播间权重、实现高 GMV 增长的关键。
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 欢迎进入与送礼感谢 深化详情页 (F18 & F19) -->
+        <div id="view-interaction-social" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Social Etiquette & Trust Logic</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">欢迎进入与送礼感谢<br><span class="text-[#10a37f]">打造充满温情与仪式感的数智直播间</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-door-open"></i> 变量读名欢迎与实时报时 (F18)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            系统实时抓取直播间入场流，自动提取观众昵称并生成自然语音欢迎语。配合“实时变量报时”功能，数字人会不经意提到“现在是北京时间XX点XX分”，这种极具临场感的信息输出，不仅消除了用户对录播的怀疑，更营造了“我就在当下为您服务”的信任场。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-heart-pulse"></i> 社交行为即时反馈致谢 (F19)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            1:1 仿真真人主播的社交反射。系统针对观众的点赞、关注、加入粉丝团及赠送礼物行为，执行毫秒级的触发机制。AI 会根据互动价值自动匹配不同的感谢等级，从简短的致谢到富有感染力的口播互动。这种及时的情绪反馈是留住观众、提升直播间活跃权重的核心手段。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tech-box border-dashed border-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">仪式感驱动的留存策略</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center">
+                            <p class="text-[#10a37f] font-bold mb-2">临场感</p>
+                            <p class="text-[11px] text-gray-500">变量读名与实时报时，击穿录播质疑。</p>
+                        </div>
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center">
+                            <p class="text-[#10a37f] font-bold mb-2">获得感</p>
+                            <p class="text-[11px] text-gray-500">送礼瞬间得到偶像级的点名致谢。</p>
+                        </div>
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center">
+                            <p class="text-[#10a37f] font-bold mb-2">信任度</p>
+                            <p class="text-[11px] text-gray-500">稳定的社交反射，建立长期粉丝粘性。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 tech-box border-l-4 border-l-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-4 text-white">商业核心价值：提升直播间“权重生命线”</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        在主流直播平台的推荐算法中，“互动率”（如点赞、关注、停留）是衡量直播间质量的最重要指标。F18 和 F19 功能通过全自动化的社交交互，将原本冰冷的“观看过程”转化为“社交过程”。实测显示，开启该功能的直播间，粉丝团转化率提升 42%，平均观看时长延长 1.5 倍，从而直接拉动平台推流系统的持续曝光奖励。
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 40种语言跨海播 深化详情页 (F6) -->
+        <div id="view-global-lang" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Global Scale & Multi-lingual Logic</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">40种语言跨海播 (F6)<br><span class="text-orange-400">一键开启品牌全球化掘金时代</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-orange-400 flex items-center gap-2">
+                            <i class="fa-solid fa-earth-americas"></i> 全球化声学模型库 (F6)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            系统集成业内最全的全球语种模型，支持英、美、日、韩、德、法以及东南亚等 40 种主流语种。不仅能实现精准翻译，更搭载了地道的“本地化口音模型”，能够模拟不同国家和地区的真实语感、发音习惯及俚语表达，让海外观众产生极强的文化亲近感。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-orange-400 flex items-center gap-2">
+                            <i class="fa-solid fa-bolt-lightning"></i> TikTok 专场适配优化
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            针对 TikTok 全球直播算法进行了深度优化。支持自动识别海外地理位置执行差异化报时，并提供符合海外用户消费习惯的“夸张化、高节奏”话术风格建议。配合全球 CDN 节点分发，确保跨境直播流低延迟、高清且稳定。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tech-box border-dashed border-orange-400">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">跨境生意增长路径</h3>
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div class="flex-1 text-center p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d]">
+                            <p class="text-orange-400 font-bold mb-1">0 门槛出海</p>
+                            <p class="text-[11px] text-gray-500">无需外聘外籍主播，降低 95% 出海成本。</p>
+                        </div>
+                        <i class="fa-solid fa-angles-right text-gray-700 hidden md:block"></i>
+                        <div class="flex-1 text-center p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d]">
+                            <p class="text-orange-400 font-bold mb-1">24H 覆盖</p>
+                            <p class="text-[11px] text-gray-500">覆盖全球时差，抓住深夜黄金转化期。</p>
+                        </div>
+                        <i class="fa-solid fa-angles-right text-gray-700 hidden md:block"></i>
+                        <div class="flex-1 text-center p-4 bg-orange-400/10 rounded-xl border border-orange-400/40">
+                            <p class="text-white font-bold mb-1">规模化裂变</p>
+                            <p class="text-[11px] text-white">一套素材衍生 40 种语言，横扫全球直播间。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 tech-box border-l-4 border-l-orange-400">
+                    <h3 class="text-xl font-bold mb-4 text-white">商业核心价值：重构跨境电商生产力</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        语言障碍是制约中国供应链走向世界的最主要壁垒。F6 技术让跨境直播不再依赖于极其昂贵且稀缺的外语主播资源。商家只需一次投入，即可在 TikTok、Amazon、Shopee 等全球平台部署多语种数字分身，实现“国内运营，全球收割”。实测显示，开启本地化语种直播的跨境账号，其点击转化率（CTR）比纯英文直播提升了 65% 以上。
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 声音与形象自动换班 深化详情页 (F3 & F4) -->
+        <div id="view-auto-shift" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Team Automation & Consistency</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">声音与形象自动换班<br><span class="text-[#10a37f]">打造 24H 永不疲惫的“数字化金牌团队”</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-users-gear"></i> 多声音智能自动切换 (F3)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            支持在单个直播任务中预设多套克隆音色。系统能够根据讲解产品的品类、直播间的氛围波动或特定的话术节点，智能切换不同的声音人格。这种“声音矩阵”极大丰富了听觉层次，能有效缓解观众对单一音色的审美疲劳，提升直播间留存率。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left"></i> AI 主播逻辑自动换班 (F4)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            这是实现无人值守直播的核心逻辑。支持自定义排班机制，在设定好的时间节点、流量阈值或讲解循环结束后，系统会自动平滑切换出场数字人形象。从“早班亲和少女”到“晚班干货大叔”，模拟真人团队的协作排班，确护直播间 24H 持续处于巅峰活跃状态。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tech-box border-dashed border-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">“金牌团队”排班逻辑可视化</h3>
+                    <div class="relative py-10">
+                        <div class="absolute top-1/2 left-0 w-full h-1 bg-[#2d2d2d] -translate-y-1/2"></div>
+                        <div class="flex justify-between relative">
+                            <div class="text-center">
+                                <div class="w-12 h-12 rounded-full bg-[#10a37f] mx-auto flex items-center justify-center text-white mb-3">08:00</div>
+                                <p class="text-xs font-bold">形象 A</p>
+                                <p class="text-[10px] text-gray-500">元气晨间带货</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-12 h-12 rounded-full bg-[#171717] border-2 border-[#10a37f] mx-auto flex items-center justify-center text-[#10a37f] mb-3">14:00</div>
+                                <p class="text-xs font-bold">形象 B</p>
+                                <p class="text-[10px] text-gray-500">专业午后评测</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-12 h-12 rounded-full bg-[#10a37f] mx-auto flex items-center justify-center text-white mb-3">20:00</div>
+                                <p class="text-xs font-bold">形象 C</p>
+                                <p class="text-[10px] text-gray-500">深夜福利逼单</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 tech-box border-l-4 border-l-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-4 text-white">商业核心价值：重塑直播间生命周期</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        传统直播最大的痛点是“人”。主播会累、会有情绪、会离职，且观众会对单一形象产生视觉疲劳。F3/F4 组合将直播间进化为一套自动运行的资产系统。通过不断切换形象与声音，直播间能够全天候覆盖不同时段、不同心智偏好的用户群体。实测数据显示，开启自动换班模式的直播间，平均单账号日均 GMV 贡献提升了 2.4 倍，且账号因内容丰富度高，更易获得平台的长效推流奖励。
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 视频号报时验证 深化详情页 (F7) -->
+        <div id="view-compliance-verify" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Official Compliance & Trust Logic</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">视频号报时验证 (F7)<br><span class="text-red-500">攻克官方风控核验的“行业核武器”</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-red-500 flex items-center gap-2">
+                            <i class="fa-solid fa-id-card-clip"></i> 手持动态报时黑科技 (F7)
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            针对微信视频号等严苛平台的“人机核验”机制，我们自研了 F7 手持报时专利。数字人能以自然的手势持拿真实动态更新的时间卡片或手机，向平台及观众实时证明直播的“当下性”。该功能通过对持卡姿态的深度学习，确保卡片与手部遮挡逻辑完美自然，彻底规避判播风险。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-red-500 flex items-center gap-2">
+                            <i class="fa-solid fa-user-shield"></i> 官方核验对抗算法
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            集成最新的平台反爬虫与反录播对抗算法。系统不仅在视觉上报时，更在音频流中嵌入实时的变量时间口播。这种“声影一致”的即时性证明，让直播间能够完美通过官方的人工抽检与系统自动比对，确保账号在流量高峰期的运营稳定性。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tech-box border-dashed border-red-500">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">为什么“报时”决定了账号寿命？</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0 mt-1">
+                                <i class="fa-solid fa-ban"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-white mb-1 text-white">击穿“非人类”判定</p>
+                                <p class="text-sm text-[#8e8ea0]">平台通过随机抽查直播间的实时信息来判定是否为录播。F7 功能能即时提供证据，确保账号不被限流或封禁。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0 mt-1">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-white mb-1 text-white">建立消费级信任</p>
+                                <p class="text-sm text-[#8e8ea0]">观众在看到主播手持精准的北京时间进行互动时，会产生强烈的“真人现场感”，显著降低售前疑虑。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 tech-box border-l-4 border-l-red-500">
+                    <h3 class="text-xl font-bold mb-4 text-white">商业核心价值：账号资产的终极护城河</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        在 AI 直播领域，账号的稳定性就是品牌的最核心资产。一次不慎的封禁可能导致积累数月的粉丝与推流权重归零。F7 视频号报时验证不仅是一个技术功能，更是我们为商户提供的“运营保险”。它让您的 AI 直播间在官方合规的框架下长效运行，实现从“短期获利”到“长期品牌运营”的跨越。目前，使用 F7 功能的商户账号合规存活率高达 99.2% 以上。
+                    </p>
+                </div>
+            </div>
+        </div>        
+
+        <!-- 直播保镖与自动下播 深化详情页 (F21 & F22) -->
+        <div id="view-security-guard" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge text-white">Security & Stability Guard</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">直播保镖与自动下播 (F21 & F22)<br><span class="text-red-400">账号资产安全的“数字化锦衣卫”</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 text-white">
+                    <div class="tech-box text-white">
+                        <h3 class="text-xl font-bold mb-4 text-red-400 flex items-center gap-2 text-white">
+                            <i class="fa-solid fa-user-shield text-white"></i> F21: 直播保镖实时防非检测
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            系统内置针对抖音、快手、视频号等平台的最新违规词库与环境识别模型。直播保镖会实时扫描背景画面、文案内容及弹幕交互，一旦发现疑似非人类行为或敏感词汇，系统将即时执行预警提醒或自动纠偏动作，将平台风控封号风险降至最低。
+                        </p>
+                    </div>
+                    <div class="tech-box text-white">
+                        <h3 class="text-xl font-bold mb-4 text-red-400 flex items-center gap-2">
+                            <i class="fa-solid fa-stopwatch-20"></i> F22: 智能自动下播与素材去重
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            模拟真人作息，支持设定智能自动下播逻辑。配合底层的素材重组去重算法，系统能自动在下一次开播前对背景光影、素材MD5、数字人动作噪点进行动态更新，确保每一次开播对于平台算法而言都是“高原创、高权重”的新内容。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tech-box border-dashed border-red-400 text-white">
+                    <h3 class="text-xl font-bold mb-6 text-white text-center">安全运营闭环体系</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-white">
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center text-white">
+                            <i class="fa-solid fa-shield-halved text-red-400 mb-2 text-white"></i>
+                            <p class="font-bold text-sm mb-1 text-white">全天候扫描</p>
+                            <p class="text-[10px] text-gray-500">毫秒级捕捉画面与语音违规风险</p>
+                        </div>
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center">
+                            <i class="fa-solid fa-arrows-spin text-red-400 mb-2"></i>
+                            <p class="font-bold text-sm mb-1">内容动态重组</p>
+                            <p class="text-[10px] text-gray-500">通过底层算法规避判播与判重</p>
+                        </div>
+                        <div class="p-4 bg-[#0d0d0d] rounded-xl border border-[#2d2d2d] text-center">
+                            <i class="fa-solid fa-user-check text-red-400 mb-2"></i>
+                            <p class="font-bold text-sm mb-1 text-white text-white">拟人化运营</p>
+                            <p class="text-[10px] text-gray-500">自动下播休息，符合真人运营规律</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 tech-box border-l-4 border-l-red-400 text-white">
+                    <h3 class="text-xl font-bold mb-4 text-white">商业核心价值：护航长期主义</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose text-white text-white">
+                        在数字人带货领域，最大的成本不是硬件，而是“账号被封”。一个积累了万级粉丝、具备精准推流标签的账号是企业的数字化生命线。F21 和 F22 并非简单的辅助功能，而是整套系统的安全底座。它将“被动挨打”转变为“主动防御”，通过规避平台最敏感的违规风险，确保商家能够稳健地获取长效流量红利，实现真正的“长期躺赚”。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 极速部署一键安装 深化详情页 (F23 & F26) -->
+        <div id="view-easy-install" class="view-container">
+            <div class="px-5 py-10 lg:px-20 lg:py-16 max-w-4xl mx-auto text-white">
+                <div class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> 返回系统概览
+                </div>
+                <span class="detail-badge">Instant Implementation & Low Barrier</span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-white mb-8">极速部署一键安装<br><span class="text-[#10a37f]">从“买到”到“开播”仅需 10 分钟</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> F26: 自动化环境集成部署包
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            彻底解决 AI 软件部署难的行业顽疾。系统内置全量依赖驱动（CUDA, CUDNN, Python 运行环境），支持傻瓜式一键解压即用。自动识别本地硬件配置并匹配最优计算策略，无需手动修改任何代码配置，让带货重心重新回到内容运营。
+                        </p>
+                    </div>
+                    <div class="tech-box">
+                        <h3 class="text-xl font-bold mb-4 text-[#10a37f] flex items-center gap-2">
+                            <i class="fa-solid fa-bolt-lightning"></i> F23: 极速开播交互逻辑
+                        </h3>
+                        <p class="text-sm text-[#8e8ea0] leading-relaxed">
+                            首创“分钟级起号”工作流。用户只需执行：[1.选择克隆形象] -> [2.导入智慧话术] -> [3.点击一键推流] 简单的三步动作即可开启专业直播。内置 20+ 爆款直播间灯光背景预设，让初学者也能拥有顶流直播间的视觉表现力。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-[#000000] border border-[#2d2d2d] rounded-2xl p-8 mb-12">
+                    <h3 class="text-xl font-bold mb-8 text-white text-center">数字化生产力上线时间线</h3>
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-6 relative">
+                        <div class="absolute top-12 left-0 w-full h-0.5 bg-[#2d2d2d] hidden md:block z-0"></div>
+                        <div class="text-center relative z-10 w-full md:w-auto">
+                            <div class="w-12 h-12 rounded-full bg-[#10a37f] mx-auto flex items-center justify-center text-white font-bold mb-3 shadow-[0_0_15px_rgba(16,163,127,0.5)]">1</div>
+                            <p class="text-sm font-bold">解压安装</p>
+                            <p class="text-[10px] text-gray-500 mt-1">自动识别算力</p>
+                        </div>
+                        <div class="text-center relative z-10 w-full md:w-auto">
+                            <div class="w-12 h-12 rounded-full bg-[#10a37f] mx-auto flex items-center justify-center text-white font-bold mb-3 shadow-[0_0_15px_rgba(16,163,127,0.5)]">2</div>
+                            <p class="text-sm font-bold">参数同步</p>
+                            <p class="text-[10px] text-gray-500 mt-1">毫秒级同步克隆</p>
+                        </div>
+                        <div class="text-center relative z-10 w-full md:w-auto">
+                            <div class="w-12 h-12 rounded-full bg-[#10a37f] mx-auto flex items-center justify-center text-white font-bold mb-3 shadow-[0_0_15px_rgba(16,163,127,0.5)]">3</div>
+                            <p class="text-sm font-bold">正式开播</p>
+                            <p class="text-[10px] text-gray-500 mt-1">24H 自动带货</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tech-box border-l-4 border-l-[#10a37f]">
+                    <h3 class="text-xl font-bold mb-4 text-white">商业核心价值：技术降维，利润升级</h3>
+                    <p class="text-sm text-[#8e8ea0] leading-loose">
+                        对于商户而言，技术不应该成为门槛，而应该是盈利的杠杆。极速部署系统将传统直播间 15 天的筹备期（含搭建、招聘、培训）缩短至 10 分钟。这意味着您可以以极低的时间边际成本，快速测试不同品类、不同形象、不同话术的直播间收益，实现资产的快速迭代与规模化复制。极简的操作也意味着极低的员工培训成本，让带货真正进入“轻资产运营”时代。
+                    </p>
+                </div>
+            </div>
+        </div>        
+
+    </main>
+
+    <script>
+        // 核心功能：切换视图
+        function switchView(viewId) {
+            const containers = document.querySelectorAll('.view-container');
+            containers.forEach(v => v.classList.remove('active'));
+
+            const targetView = document.getElementById('view-' + viewId);
+            if (targetView) {
+                targetView.classList.add('active');
+                targetView.scrollTop = 0;
+            }
+
+            // 更新侧边栏状态
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            if (viewId === 'home') document.getElementById('nav-home').classList.add('active');
+
+            // 移动端收起侧边栏
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.remove('active');
+                document.getElementById('overlay').classList.remove('active');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            const menuToggle = document.getElementById('menuToggle');
+            const generateBtn = document.getElementById('generateBtn');
+            const productInput = document.getElementById('productInput');
+            const chatBox = document.getElementById('chatBox');
+            const goalSelect = document.getElementById('goalSelect');
+
+            // 侧边栏切换
+            if (menuToggle) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('active');
+                    overlay.classList.toggle('active');
+                });
+            }
+            if (overlay) {
+                overlay.addEventListener('click', () => {
+                    sidebar.classList.remove('active');
+                    overlay.classList.remove('active');
+                });
+            }
+
+            // Gemini API 集成
+            if (generateBtn) {
+                const apiKey = ""; 
+
+                async function callOpenRouter(prompt, systemInstruction) {
+  const apiKey = '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';
+
+  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'nex-agi/deepseek-v3.1-nex-n1:free',
+      messages: [
+        { role: 'system', content: systemInstruction || '你是一个中文直播带货策划专家。' },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  });
+
+  if (!resp.ok) throw new Error('OpenRouter API Error');
+  const data = await resp.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+                function appendMessage(role, content) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = `flex gap-4 items-start ${role === 'user' ? 'flex-row-reverse' : ''}`;
+                    wrapper.innerHTML = `
+                        <div class="w-8 h-8 rounded flex-shrink-0 flex items-center justify-center text-[10px] font-bold ${role === 'user' ? 'bg-[#343541]' : 'bg-[#10a37f]'} text-white">
+                            ${role === 'user' ? 'YOU' : 'AI'}
+                        </div>
+                        <div class="${role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'} p-4 text-sm max-w-[85%] text-gray-200">
+                            ${content}
+                        </div>
+                    `;
+                    chatBox.appendChild(wrapper);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+
+                generateBtn.addEventListener('click', async () => {
+                    const val = productInput.value.trim();
+                    if (!val) return;
+                    appendMessage('user', val);
+                    productInput.value = "";
+                    generateBtn.disabled = true;
+
+                    const loading = document.createElement('div');
+                    loading.className = "flex gap-4 items-start animate-pulse";
+                    loading.innerHTML = `<div class="w-8 h-8 rounded bg-[#10a37f] flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white">AI</div><div class="chat-bubble-ai p-4 text-sm italic text-gray-500">✨ 深度构思脚本中...</div>`;
+                    chatBox.appendChild(loading);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+
+                    let systemPrompt = "你是一个顶级带货策划。";
+                    const goal = goalSelect ? goalSelect.value : 'optimize';
+                    if (goal === 'optimize') systemPrompt += "优化卖点生成剧本。";
+                    else if (goal === 'translate') systemPrompt += "翻译为 TikTok 地道英语。";
+                    else systemPrompt += "生成异议处理预案。";
+
+                    try {
+                        const result = await callOpenRouter(val, systemPrompt);
+    chatBox.removeChild(loading);
+    appendMessage('ai', result || "暂时无法生成。");
+                    } catch (e) {
+                        chatBox.removeChild(loading);
+                        appendMessage('ai', "连接超时，请检查配置。");
+                    } finally {
+                        generateBtn.disabled = false;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
